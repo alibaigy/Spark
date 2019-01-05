@@ -1,0 +1,50 @@
+https://www.oreilly.com/library/view/high-performance-spark/9781491943199/
+
+
+
+
+rdd1 = sc.textfile("<file address>")
+rdd1.collect()
+rdd1.saveAsTextFile("<file address>")
+
+
+
+-- First, copy files transactions.csv and balance.csv to hadoop hdfs
+[cloudera@quickstart ~]$ hadoop fs -mkdir spark
+[cloudera@quickstart ~]$ hadoop fs -copyFromLocal Desktop/balance.csv spark
+[cloudera@quickstart ~]$ hadoop fs -copyFromLocal Desktop/transactions.csv spark
+
+
+-- Now run pyspark and read the files into an RDD
+>>> balF = sc.textFile("spark/balance.csv")
+>>> txF = sc.textFile("spark/transactions.csv")
+>>> rd1.collect()
+
+>>> txMap = balF.map(lambda x: (x.split(",")[0] , int(x.split(",")[1])))
+>>> balMap = balF.map(lambda x: (x.split(",")[0] , int(x.split(",")[1])))
+
+>>> txAgg = txMap.reduceByKey(lambda x,y : x+y)
+
+---->>> Note: Join may not work when no data frame is defined
+---- Now task2: with a data frame:
+
+txMap = txF.map(lambda x: Row(account=x.split(",")[0] , amount = int(x.split(",")[1]))).toDF()
+>>> from pyspark.sql.functions import sum as _sum 
+>>> txAgg = txMap.groupBy("account").agg(_sum("amount").alias("Total"))
+
+>>> balMap = balF.map(lambda x:Row(account = x.split(",")[0] , balance = int(x.split(",")[1]))).toDF()
+
+>>> joined = txAgg.join(balMap , 'account')
+>>> errors = joined.filter(joined.Total != joined.balance)
+
+>>> errors.map(lambda x: str(x[0]) + "," + str(x[1]) +"," + str(x[3])).saveAsTextFile("spark/output.csv")
+
+-- OR, to save in one file only:
+
+>>> errors.repartition(1).write.format("json").save("/spark/outputJason")
+
+-------------------------------------
+
+>>> sqlContext.sql("create table mydb.errors (account string, Total int, balance int)").show()
+>>> sqlContext.sql("insert into mydb.errors Select t.account,t.Total, b.balance from txAggTable t left join balTable b on t.account = b.account where t.Total <> b.balance")
+

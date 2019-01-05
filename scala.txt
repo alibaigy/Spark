@@ -1,0 +1,14 @@
+val txF = sc.textFile("/spark/transactions.csv")
+val balF = sc.textFile("/spark/balance.csv")
+
+val tx1 = txF.map(x => (x.split(",")(0), x.split(",")(1).toInt))
+val tx2 = tx1.reduceByKey(_ + _)
+
+val bal1 = balF.map(x=> (x.split(",")(0), x.split(",")(1).toInt))
+
+bal1.join(tx2)
+val joinedRdd = bal1.join(tx2)
+
+val errorAccounts = joinedRdd.filter(x=> x._2._1 != x._2._2)
+
+errorAccounts.saveAsTextFile("/spark/op1")
